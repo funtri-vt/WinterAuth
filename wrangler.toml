@@ -1,0 +1,20 @@
+name = "winterauth" # currently a demo
+main = "src/adapters/cloudflare.ts"
+compatibility_date = "2026-04-14"
+compatibility_flags = ["nodejs_compat"]
+
+# Define the environment variables (non-secrets)
+[vars]
+ISSUER_URL = "http://localhost:8787"
+
+# Note: JWT_SECRET should NEVER be put in this file. 
+# For local dev, you can put it in a .dev.vars file:
+# JWT_SECRET="my-super-secret-local-key"
+# For production, run: npx wrangler secret put JWT_SECRET
+
+# Bind the D1 Database (Matches the Env interface in adapter)
+[[d1_databases]]
+binding = "DB"
+database_name = "winterauth-db"
+database_id = "xxxx-xxxx-xxxx-xxxx" # You will replace this with your real ID later
+preview_database_id = "DB" # Used for local development
