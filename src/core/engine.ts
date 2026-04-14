@@ -145,10 +145,22 @@ export class WinterAuth {
     // Basic security check: Ensure API requests are authorized (e.g., Bearer token)
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
+      return new Response(JSON.stringify({ error: 'Unauthorized. Missing Bearer token.' }), { status: 401 });
     }
 
     switch (url.pathname) {
+      case '/api/iam/init':
+        // Protected endpoint to manually trigger database schema initialization
+        if (this.config.storage.init) {
+          try {
+            await this.config.storage.init();
+            return new Response(JSON.stringify({ success: true, message: 'Storage schemas initialized successfully.' }), { status: 200 });
+          } catch (e: any) {
+            return new Response(JSON.stringify({ error: 'Initialization failed', details: e.message }), { status: 500 });
+          }
+        }
+        return new Response(JSON.stringify({ error: 'Configured storage provider does not support manual initialization.' }), { status: 400 });
+        
       case '/api/iam/users':
         return new Response('IAM Users - Not Implemented', { status: 501 });
       case '/api/iam/sessions':

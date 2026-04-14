@@ -14,6 +14,7 @@ export interface WinterAuthConfig {
   
   // Storage layer
   storage: {
+    init?: () => Promise<void>; // Optional: Exposes manual schema initialization for API triggers
     users: UserRepository;
     sessions: SessionRepository;
     authFactors: AuthFactorRepository;

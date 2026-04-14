@@ -71,6 +71,7 @@ export class D1StorageManager {
 
   /**
    * Manually initializes the database schemas.
+   * We use IF NOT EXISTS to guarantee we never overwrite or dupe existing data.
    */
   public async init(): Promise<void> {
     const statements = [
@@ -109,7 +110,7 @@ export class D1StorageManager {
     ];
     
     await this.db.batch(statements);
-    console.log('[D1StorageManager] Schemas initialized successfully.');
+    console.log('[D1StorageManager] Schemas initialized successfully via IF NOT EXISTS.');
   }
 }
 
@@ -122,88 +123,107 @@ class D1UserRepository implements UserRepository {
 
   async createUser(email: string): Promise<User> {
     await this.manager.ready();
-    // TODO: Implement SQL INSERT
-    throw new Error('Not implemented');
+    const id = crypto.randomUUID();
+    const now = new Date();
+    
+    // SQLite doesn't have a native Date type, so we store timestamps as INTEGERS
+    await this.manager.db.prepare(
+      'INSERT INTO users (id, email, created_at, updated_at) VALUES (?, ?, ?, ?)'
+    ).bind(id, email, now.getTime(), now.getTime()).run();
+
+    return { id, email, createdAt: now, updatedAt: now };
   }
 
   async getUserById(id: string): Promise<User | null> {
     await this.manager.ready();
-    // TODO: Implement SQL SELECT
-    throw new Error('Not implemented');
+    const record = await this.manager.db.prepare(
+      'SELECT * FROM users WHERE id = ?'
+    ).bind(id).first<any>();
+
+    if (!record) return null;
+    return {
+      id: record.id,
+      email: record.email,
+      createdAt: new Date(record.created_at),
+      updatedAt: new Date(record.updated_at)
+    };
   }
 
   async getUserByEmail(email: string): Promise<User | null> {
     await this.manager.ready();
-    // TODO: Implement SQL SELECT
-    throw new Error('Not implemented');
+    const record = await this.manager.db.prepare(
+      'SELECT * FROM users WHERE email = ?'
+    ).bind(email).first<any>();
+
+    if (!record) return null;
+    return {
+      id: record.id,
+      email: record.email,
+      createdAt: new Date(record.created_at),
+      updatedAt: new Date(record.updated_at)
+    };
   }
 
   async updateUser(userId: string, updates: Partial<User>): Promise<User> {
     await this.manager.ready();
-    // TODO: Implement SQL UPDATE
-    throw new Error('Not implemented');
+    
+    // Fetch existing user to merge updates safely
+    const existing = await this.getUserById(userId);
+    if (!existing) throw new Error('User not found');
+
+    const updatedEmail = updates.email || existing.email;
+    const now = new Date();
+
+    await this.manager.db.prepare(
+      'UPDATE users SET email = ?, updated_at = ? WHERE id = ?'
+    ).bind(updatedEmail, now.getTime(), userId).run();
+
+    return {
+      id: userId,
+      email: updatedEmail,
+      createdAt: existing.createdAt,
+      updatedAt: now
+    };
   }
 }
 
 class D1SessionRepository implements SessionRepository {
   constructor(private manager: D1StorageManager) {}
-
   async createSession(userId: string, expiresAt: Date): Promise<Session> {
-    await this.manager.ready();
-    throw new Error('Not implemented');
+    await this.manager.ready(); throw new Error('Not implemented');
   }
-
   async getSession(sessionId: string): Promise<Session | null> {
-    await this.manager.ready();
-    throw new Error('Not implemented');
+    await this.manager.ready(); throw new Error('Not implemented');
   }
-
   async revokeSession(sessionId: string): Promise<void> {
-    await this.manager.ready();
-    throw new Error('Not implemented');
+    await this.manager.ready(); throw new Error('Not implemented');
   }
-
   async revokeAllUserSessions(userId: string): Promise<void> {
-    await this.manager.ready();
-    throw new Error('Not implemented');
+    await this.manager.ready(); throw new Error('Not implemented');
   }
 }
 
 class D1AuthFactorRepository implements AuthFactorRepository {
   constructor(private manager: D1StorageManager) {}
-
   async savePasswordHash(userId: string, hash: string): Promise<void> {
-    await this.manager.ready();
-    throw new Error('Not implemented');
+    await this.manager.ready(); throw new Error('Not implemented');
   }
-
   async getPasswordHash(userId: string): Promise<string | null> {
-    await this.manager.ready();
-    throw new Error('Not implemented');
+    await this.manager.ready(); throw new Error('Not implemented');
   }
-
   async savePasskey(userId: string, passkey: PasskeyFactor): Promise<void> {
-    await this.manager.ready();
-    throw new Error('Not implemented');
+    await this.manager.ready(); throw new Error('Not implemented');
   }
-
   async getPasskeys(userId: string): Promise<PasskeyFactor[]> {
-    await this.manager.ready();
-    throw new Error('Not implemented');
+    await this.manager.ready(); throw new Error('Not implemented');
   }
-
   async updatePasskeyCounter(credentialId: string, newCounter: number): Promise<void> {
-    await this.manager.ready();
-    throw new Error('Not implemented');
+    await this.manager.ready(); throw new Error('Not implemented');
   }
-
   async saveRecoveryCodes(userId: string, hashedCodes: string[]): Promise<void> {
-    await this.manager.ready();
-    throw new Error('Not implemented');
+    await this.manager.ready(); throw new Error('Not implemented');
   }
-
   async consumeRecoveryCode(userId: string, hashedCode: string): Promise<boolean> {
-    await this.manager.ready();
-    throw new Error('Not implemented');
+    await this.manager.ready(); throw new Error('Not implemented');
   }
 }

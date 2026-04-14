@@ -24,6 +24,11 @@ export function buildCloudflareConfig(env: Env): WinterAuthConfig {
   // Initialize the database manager with the Cloudflare binding
   const dbManager = new D1StorageManager(env.DB);
 
+  // Leveraging our new event listener to confirm initialization
+  dbManager.onReady(() => {
+    console.log('[WinterAuth] Storage Provider is fully initialized and ready!');
+  });
+
   return {
     // 1. Core Identity Settings
     issuerName: env.ISSUER_URL || 'http://localhost:8787',
@@ -31,6 +36,7 @@ export function buildCloudflareConfig(env: Env): WinterAuthConfig {
     
     // 2. Storage Modules (Where your data lives)
     storage: {
+      init: () => dbManager.init(), // Expose init to the core engine's IAM router
       users: dbManager.users,
       sessions: dbManager.sessions,
       authFactors: dbManager.authFactors,
