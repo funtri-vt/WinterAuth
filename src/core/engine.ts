@@ -88,8 +88,21 @@ export class WinterAuth {
   private async handleOIDCRequest(req: Request, url: URL): Promise<Response> {
     switch (url.pathname) {
       case '/.well-known/openid-configuration':
-        // TODO: Return OIDC Discovery JSON
-        return new Response('OIDC Discovery - Not Implemented', { status: 501 });
+        // The Discovery Document tells Service Providers (like Cloudflare Access)
+        // where to find our authorization and token endpoints.
+        const discoveryDoc = {
+          issuer: this.config.issuerName,
+          authorization_endpoint: `${this.config.issuerName}/oidc/authorize`,
+          token_endpoint: `${this.config.issuerName}/oidc/token`,
+          jwks_uri: `${this.config.issuerName}/oidc/jwks`,
+          response_types_supported: ["code"],
+          subject_types_supported: ["public"],
+          id_token_signing_alg_values_supported: ["RS256"]
+        };
+        return new Response(JSON.stringify(discoveryDoc), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' }
+        });
       case '/oidc/authorize':
         // TODO: Validate client, generate state, redirect to /auth/login
         return new Response('OIDC Authorize - Not Implemented', { status: 501 });
@@ -107,8 +120,16 @@ export class WinterAuth {
   private async handleAuthUIRequest(req: Request, url: URL): Promise<Response> {
     switch (url.pathname) {
       case '/auth/login':
-        // TODO: Render login form or process login POST
-        return new Response('Auth Login - Not Implemented', { status: 501 });
+        if (req.method === 'GET') {
+          // TODO: Generate a cryptographically secure CSRF token and store it in a cookie.
+          // Using a UUID temporarily just so the UI renders.
+          const csrfToken = crypto.randomUUID();
+          return await this.config.ui.renderLogin(req, { csrfToken });
+        } else if (req.method === 'POST') {
+          // TODO: Parse the form data, hash the password, check against D1, create a session
+          return new Response('Login POST - Auth logic coming next', { status: 501 });
+        }
+        return new Response('Method Not Allowed', { status: 405 });
       case '/auth/mfa':
         // TODO: Render MFA/Passkey challenge
         return new Response('Auth MFA - Not Implemented', { status: 501 });
