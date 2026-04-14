@@ -5,20 +5,8 @@
  * into the agnostic WinterAuthConfig, then boots the core engine.
  */
 import { WinterAuth } from '../core/engine';
-import type { 
-  WinterAuthConfig, 
-  UserRepository, 
-  SessionRepository, 
-  AuthFactorRepository, 
-  HashProvider, 
-  PresentationHandler 
-} from '../core/interfaces';
-
-// TODO: These will be imported from our actual module implementations later
-// import { D1UserRepository } from '../modules/storage/d1-users';
-// import { D1SessionRepository } from '../modules/storage/d1-sessions';
-// import { WebCryptoHashProvider } from '../modules/crypto/webcrypto';
-// import { DefaultUIHandler } from '../modules/ui/default-ui';
+import type { D1Database, ExecutionContext } from '@cloudflare/workers-types';
+import { buildCloudflareConfig } from '../config';
 
 /**
  * Define your Cloudflare bindings here.
@@ -33,40 +21,9 @@ export interface Env {
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     
-    // 1. Build the WinterAuth Configuration
-    // We map the Cloudflare-specific 'env' variables into our agnostic config.
-    const config: WinterAuthConfig = {
-      issuerName: env.ISSUER_URL || 'http://localhost:8787',
-      jwtSecret: env.JWT_SECRET || 'dev-secret-do-not-use-in-prod',
-      
-      // Injecting the Storage Modules
-      storage: {
-        // users: new D1UserRepository(env.DB),
-        users: {} as UserRepository, // Placeholder until module is built
-        
-        // sessions: new D1SessionRepository(env.DB),
-        sessions: {} as SessionRepository, // Placeholder
-        
-        // authFactors: new D1AuthFactorRepository(env.DB),
-        authFactors: {} as AuthFactorRepository, // Placeholder
-      },
-
-      // Injecting the Cryptography Modules
-      crypto: {
-        // hashing: new WebCryptoHashProvider(),
-        hashing: {} as HashProvider, // Placeholder
-      },
-
-      // Injecting the Presentation Module
-      // ui: new DefaultUIHandler(),
-      ui: {} as PresentationHandler, // Placeholder
-      
-      policies: {
-        allowPasswordFallback: true,
-        requireMFA: false,
-        sessionDurationSeconds: 86400 // 24 hours
-      }
-    };
+    // 1. Build the WinterAuth Configuration from the user's config file
+    // We pass the Cloudflare 'env' object so the config file can access the DB and secrets.
+    const config = buildCloudflareConfig(env);
 
     // 2. Initialize the Engine
     // The engine doesn't know it's on Cloudflare. It just knows it has a valid config.
