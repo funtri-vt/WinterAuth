@@ -12,17 +12,18 @@ import type {
   PresentationHandler 
 } from './core/interfaces';
 import type { Env } from './adapters/cloudflare';
-
-// TODO: Import your specific modules here when they are built
-// import { D1UserRepository } from './modules/storage/d1-users';
-// import { WebCryptoHashProvider } from './modules/crypto/webcrypto';
-// import { DefaultUIHandler } from './modules/ui/default-ui';
+import { D1StorageManager } from './modules/storage/d1';
+import { WebCryptoHashProvider } from './modules/crypto/webcrypto';
+import { DefaultUIHandler } from './modules/ui/default-ui';
 
 /**
  * Builds the configuration for the WinterAuth engine.
  * We use a function here so we can access the runtime environment variables (env).
  */
 export function buildCloudflareConfig(env: Env): WinterAuthConfig {
+  // Initialize the database manager with the Cloudflare binding
+  const dbManager = new D1StorageManager(env.DB);
+
   return {
     // 1. Core Identity Settings
     issuerName: env.ISSUER_URL || 'http://localhost:8787',
@@ -30,25 +31,18 @@ export function buildCloudflareConfig(env: Env): WinterAuthConfig {
     
     // 2. Storage Modules (Where your data lives)
     storage: {
-      // users: new D1UserRepository(env.DB),
-      users: {} as UserRepository, // Placeholder
-      
-      // sessions: new D1SessionRepository(env.DB),
-      sessions: {} as SessionRepository, // Placeholder
-      
-      // authFactors: new D1AuthFactorRepository(env.DB),
-      authFactors: {} as AuthFactorRepository, // Placeholder
+      users: dbManager.users,
+      sessions: dbManager.sessions,
+      authFactors: dbManager.authFactors,
     },
 
     // 3. Cryptography Modules (How you hash/encrypt data)
     crypto: {
-      // hashing: new WebCryptoHashProvider(),
-      hashing: {} as HashProvider, // Placeholder
+      hashing: new WebCryptoHashProvider(),
     },
 
     // 4. Presentation Module (How your UI looks)
-    // ui: new DefaultUIHandler(),
-    ui: {} as PresentationHandler, // Placeholder
+    ui: new DefaultUIHandler(),
     
     // 5. Security Policies
     policies: {
