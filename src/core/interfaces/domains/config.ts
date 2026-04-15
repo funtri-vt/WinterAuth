@@ -12,6 +12,9 @@ export interface WinterAuthConfig {
   issuerName: string; // e.g., "https://auth.mycompany.com"
   jwtSecret: string;  // Secret used to sign outgoing OIDC tokens
   
+  // Environment Flag
+  isProduction?: boolean; // Disables testing endpoints and enforces strict security
+  
   // Storage layer
   storage: {
     init?: () => Promise<void>; // Optional: Exposes manual schema initialization for API triggers

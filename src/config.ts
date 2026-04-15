@@ -34,6 +34,9 @@ export function buildCloudflareConfig(env: Env): WinterAuthConfig {
     issuerName: env.ISSUER_URL || 'http://localhost:8787',
     jwtSecret: env.JWT_SECRET || 'dev-secret-do-not-use-in-prod',
     
+    // Safety flag: Set this to true in your production environment to lock down test endpoints
+    isProduction: false, 
+
     // 2. Storage Modules (Where your data lives)
     storage: {
       init: () => dbManager.init(), // Expose init to the core engine's IAM router
