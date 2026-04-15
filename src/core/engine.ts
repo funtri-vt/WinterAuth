@@ -25,6 +25,22 @@ export class WinterAuth {
   }
 
   /**
+   * Helper utility to extract a specific cookie by name from the Request.
+   */
+  private getCookie(req: Request, name: string): string | null {
+    const cookieHeader = req.headers.get('Cookie');
+    if (!cookieHeader) return null;
+    
+    const cookies = cookieHeader.split(';').reduce((acc, current) => {
+      const [k, v] = current.trim().split('=');
+      acc[k] = v;
+      return acc;
+    }, {} as Record<string, string>);
+    
+    return cookies[name] || null;
+  }
+
+  /**
    * The Universal Web Standard Entry Point.
    * Host adapters (like Cloudflare fetch handlers) pass the Request here.
    */
@@ -116,8 +132,28 @@ export class WinterAuth {
     switch (url.pathname) {
       case '/auth/login':
         if (req.method === 'GET') {
+          // 1. Check if the user already has a valid session cookie
+          const sessionId = this.getCookie(req, 'winterauth_session');
+          if (sessionId) {
+            const session = await this.config.storage.sessions.getSession(sessionId);
+            
+            // 2. Validate the session exists and hasn't expired
+            if (session && session.expiresAt > new Date()) {
+              // Redirect them straight to the success/OIDC handoff page!
+              return new Response('Already authenticated. Redirecting...', {
+                status: 302,
+                headers: { 'Location': '/auth/success' }
+              });
+            } else if (session) {
+              // If the session exists but is expired, clean it up proactively
+              await this.config.storage.sessions.revokeSession(sessionId);
+            }
+          }
+
+          // 3. No valid session found, generate CSRF and render the login form
           const csrfToken = crypto.randomUUID();
           return await this.config.ui.renderLogin(req, { csrfToken });
+          
         } else if (req.method === 'POST') {
           try {
             const formData = await req.formData();
