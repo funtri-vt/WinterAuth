@@ -189,28 +189,71 @@ class D1UserRepository implements UserRepository {
 
 class D1SessionRepository implements SessionRepository {
   constructor(private manager: D1StorageManager) {}
+
   async createSession(userId: string, expiresAt: Date): Promise<Session> {
-    await this.manager.ready(); throw new Error('Not implemented');
+    await this.manager.ready();
+    const id = crypto.randomUUID();
+    const now = new Date();
+    
+    await this.manager.db.prepare(
+      'INSERT INTO sessions (id, user_id, expires_at, created_at) VALUES (?, ?, ?, ?)'
+    ).bind(id, userId, expiresAt.getTime(), now.getTime()).run();
+
+    return { id, userId, expiresAt, createdAt: now };
   }
+
   async getSession(sessionId: string): Promise<Session | null> {
-    await this.manager.ready(); throw new Error('Not implemented');
+    await this.manager.ready();
+    const record = await this.manager.db.prepare(
+      'SELECT * FROM sessions WHERE id = ?'
+    ).bind(sessionId).first<any>();
+
+    if (!record) return null;
+    return {
+      id: record.id,
+      userId: record.user_id,
+      expiresAt: new Date(record.expires_at),
+      createdAt: new Date(record.created_at)
+    };
   }
+
   async revokeSession(sessionId: string): Promise<void> {
-    await this.manager.ready(); throw new Error('Not implemented');
+    await this.manager.ready();
+    await this.manager.db.prepare(
+      'DELETE FROM sessions WHERE id = ?'
+    ).bind(sessionId).run();
   }
+
   async revokeAllUserSessions(userId: string): Promise<void> {
-    await this.manager.ready(); throw new Error('Not implemented');
+    await this.manager.ready();
+    await this.manager.db.prepare(
+      'DELETE FROM sessions WHERE user_id = ?'
+    ).bind(userId).run();
   }
 }
 
 class D1AuthFactorRepository implements AuthFactorRepository {
   constructor(private manager: D1StorageManager) {}
+
   async savePasswordHash(userId: string, hash: string): Promise<void> {
-    await this.manager.ready(); throw new Error('Not implemented');
+    await this.manager.ready();
+    // Uses an Upsert so this method works for both creation and password resets
+    await this.manager.db.prepare(`
+      INSERT INTO auth_factors (user_id, password_hash) 
+      VALUES (?, ?)
+      ON CONFLICT(user_id) DO UPDATE SET password_hash = excluded.password_hash
+    `).bind(userId, hash).run();
   }
+
   async getPasswordHash(userId: string): Promise<string | null> {
-    await this.manager.ready(); throw new Error('Not implemented');
+    await this.manager.ready();
+    const record = await this.manager.db.prepare(
+      'SELECT password_hash FROM auth_factors WHERE user_id = ?'
+    ).bind(userId).first<{ password_hash: string }>();
+    
+    return record ? record.password_hash : null;
   }
+
   async savePasskey(userId: string, passkey: PasskeyFactor): Promise<void> {
     await this.manager.ready(); throw new Error('Not implemented');
   }
