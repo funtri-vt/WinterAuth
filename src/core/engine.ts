@@ -181,7 +181,7 @@ export class WinterAuth {
           </div>
         `, {
           status: 200,
-          headers: { 'Content-Type': 'text/html' }
+          headers: { 'Content-Type': 'text/html; charset=utf-8' } // Added UTF-8 charset
         });
       default:
         return new Response('Auth Page Not Found', { status: 404 });
